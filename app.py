@@ -6,6 +6,7 @@ Powered by Streamlit + DuckDB
 Rodar: streamlit run app.py
 """
 
+import os
 import time
 from pathlib import Path
 from urllib.parse import quote
@@ -19,7 +20,10 @@ import streamlit as st
 
 # Fonte de dados: MotherDuck na nuvem ou Parquet local (fallback)
 _LOCAL_PARQUET = Path(__file__).parent / "data" / "itbi_consolidado.parquet"
-_USE_MOTHERDUCK = "MOTHERDUCK_TOKEN" in st.secrets
+try:
+    _USE_MOTHERDUCK = "MOTHERDUCK_TOKEN" in st.secrets
+except FileNotFoundError:
+    _USE_MOTHERDUCK = "MOTHERDUCK_TOKEN" in os.environ
 
 if _USE_MOTHERDUCK:
     TABLE = "itbi.main.transacoes"
@@ -44,7 +48,10 @@ def fmt_num(v):
 @st.cache_resource
 def get_connection():
     if _USE_MOTHERDUCK:
-        token = st.secrets["MOTHERDUCK_TOKEN"]
+        try:
+            token = st.secrets["MOTHERDUCK_TOKEN"]
+        except (FileNotFoundError, KeyError):
+            token = os.environ["MOTHERDUCK_TOKEN"]
         con = duckdb.connect(f"md:itbi?motherduck_token={token}")
     else:
         con = duckdb.connect()
