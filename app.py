@@ -45,8 +45,11 @@ def fmt_num(v):
 def get_connection():
     if _USE_MOTHERDUCK:
         token = st.secrets["MOTHERDUCK_TOKEN"]
-        return duckdb.connect(f"md:itbi?motherduck_token={token}")
-    return duckdb.connect()
+        con = duckdb.connect(f"md:itbi?motherduck_token={token}")
+    else:
+        con = duckdb.connect()
+    con.execute("SET memory_limit='400MB'")
+    return con
 
 def query(sql: str) -> pd.DataFrame:
     return get_connection().execute(sql).fetchdf()
