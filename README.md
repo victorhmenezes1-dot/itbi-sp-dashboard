@@ -9,7 +9,6 @@ app_file: app.py
 pinned: false
 secrets:
   - MOTHERDUCK_TOKEN
-  - ANTHROPIC_API_KEY
 ---
 
 # ITBI São Paulo — Análise de Dados
