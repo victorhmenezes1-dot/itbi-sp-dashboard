@@ -1,0 +1,53 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - claude/deploy-streamlit-dashboard-hact0
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create HF Space (idempotent — 409 if already exists is OK)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://huggingface.co/api/repos/create \
+            -H "Authorization: Bearer $HF_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"type":"space","name":"itbi-sp-dashboard","private":false,"sdk":"streamlit"}')
+          echo "Space create response: $HTTP"
+
+      - name: Set MOTHERDUCK_TOKEN as HF Space secret
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+        run: |
+          PAYLOAD=$(jq -nc \
+            --arg key "MOTHERDUCK_TOKEN" \
+            --arg value "$MOTHERDUCK_TOKEN" \
+            '{"key": $key, "value": $value}')
+          HTTP=$(curl -s -o /tmp/secret_resp.json -w "%{http_code}" -X POST \
+            "https://huggingface.co/api/spaces/menezes123/itbi-sp-dashboard/secrets" \
+            -H "Authorization: Bearer $HF_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          echo "Set secret response: $HTTP"
+          cat /tmp/secret_resp.json
+
+      - name: Push code to HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git remote add hf "https://menezes123:${HF_TOKEN}@huggingface.co/spaces/menezes123/itbi-sp-dashboard"
+          git push hf HEAD:main --force
+          echo "✅ Pushed to https://huggingface.co/spaces/menezes123/itbi-sp-dashboard"
