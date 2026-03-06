@@ -1,0 +1,18 @@
+# Dados locais — não vão para o GitHub
+data/
+00. Base de Dados/
+
+# Segredos
+.streamlit/secrets.toml
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
