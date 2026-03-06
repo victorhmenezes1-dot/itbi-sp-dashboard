@@ -14,16 +14,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create HF Space (idempotent — 409 if already exists is OK)
+      - name: Create HF Space (idempotent — 409 means already exists)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          RESP=$(curl -s -w "\n%{http_code}" -X POST \
             https://huggingface.co/api/repos/create \
             -H "Authorization: Bearer $HF_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{"type":"space","name":"itbi-sp-dashboard","private":false,"sdk":"streamlit"}')
-          echo "Space create response: $HTTP"
+          BODY=$(echo "$RESP" | head -n -1)
+          HTTP=$(echo "$RESP" | tail -n 1)
+          echo "HTTP $HTTP: $BODY"
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ] && [ "$HTTP" != "409" ]; then
+            echo "❌ Space creation failed (HTTP $HTTP). Check HF_TOKEN secret."
+            exit 1
+          fi
+          echo "✅ Space ready (HTTP $HTTP)"
+          # Give HF a moment to initialise the git repo
+          sleep 5
 
       - name: Set MOTHERDUCK_TOKEN as HF Space secret
         env:
@@ -34,13 +43,14 @@ jobs:
             --arg key "MOTHERDUCK_TOKEN" \
             --arg value "$MOTHERDUCK_TOKEN" \
             '{"key": $key, "value": $value}')
-          HTTP=$(curl -s -o /tmp/secret_resp.json -w "%{http_code}" -X POST \
+          RESP=$(curl -s -w "\n%{http_code}" -X POST \
             "https://huggingface.co/api/spaces/menezes123/itbi-sp-dashboard/secrets" \
             -H "Authorization: Bearer $HF_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
-          echo "Set secret response: $HTTP"
-          cat /tmp/secret_resp.json
+          BODY=$(echo "$RESP" | head -n -1)
+          HTTP=$(echo "$RESP" | tail -n 1)
+          echo "HTTP $HTTP: $BODY"
 
       - name: Push code to HF Spaces
         env:
@@ -50,4 +60,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git remote add hf "https://menezes123:${HF_TOKEN}@huggingface.co/spaces/menezes123/itbi-sp-dashboard"
           git push hf HEAD:main --force
-          echo "✅ Pushed to https://huggingface.co/spaces/menezes123/itbi-sp-dashboard"
+          echo "✅ Live at https://huggingface.co/spaces/menezes123/itbi-sp-dashboard"
