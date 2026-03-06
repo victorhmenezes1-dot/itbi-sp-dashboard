@@ -14,50 +14,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create HF Space (idempotent — 409 means already exists)
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          RESP=$(curl -s -w "\n%{http_code}" -X POST \
-            https://huggingface.co/api/repos/create \
-            -H "Authorization: Bearer $HF_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"type":"space","name":"itbi-sp-dashboard","private":false,"sdk":"streamlit"}')
-          BODY=$(echo "$RESP" | head -n -1)
-          HTTP=$(echo "$RESP" | tail -n 1)
-          echo "HTTP $HTTP: $BODY"
-          if [ "$HTTP" != "200" ] && [ "$HTTP" != "201" ] && [ "$HTTP" != "409" ]; then
-            echo "❌ Space creation failed (HTTP $HTTP). Check HF_TOKEN secret."
-            exit 1
-          fi
-          echo "✅ Space ready (HTTP $HTTP)"
-          # Give HF a moment to initialise the git repo
-          sleep 5
+      - name: Install huggingface_hub
+        run: pip install -q "huggingface_hub>=0.23"
 
-      - name: Set MOTHERDUCK_TOKEN as HF Space secret
+      - name: Create Space, set secret, upload files
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
         run: |
-          PAYLOAD=$(jq -nc \
-            --arg key "MOTHERDUCK_TOKEN" \
-            --arg value "$MOTHERDUCK_TOKEN" \
-            '{"key": $key, "value": $value}')
-          RESP=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://huggingface.co/api/spaces/menezes123/itbi-sp-dashboard/secrets" \
-            -H "Authorization: Bearer $HF_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          BODY=$(echo "$RESP" | head -n -1)
-          HTTP=$(echo "$RESP" | tail -n 1)
-          echo "HTTP $HTTP: $BODY"
+          python - <<'EOF'
+import os
+from huggingface_hub import HfApi
 
-      - name: Push code to HF Spaces
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git remote add hf "https://menezes123:${HF_TOKEN}@huggingface.co/spaces/menezes123/itbi-sp-dashboard"
-          git push hf HEAD:main --force
-          echo "✅ Live at https://huggingface.co/spaces/menezes123/itbi-sp-dashboard"
+api = HfApi(token=os.environ["HF_TOKEN"])
+
+# 1. Create Space (no-op if it already exists)
+api.create_repo(
+    repo_id="menezes123/itbi-sp-dashboard",
+    repo_type="space",
+    space_sdk="streamlit",
+    private=False,
+    exist_ok=True,
+)
+print("✅ Space ready")
+
+# 2. Set MOTHERDUCK_TOKEN as a Space secret
+api.add_space_secret(
+    repo_id="menezes123/itbi-sp-dashboard",
+    key="MOTHERDUCK_TOKEN",
+    value=os.environ["MOTHERDUCK_TOKEN"],
+)
+print("✅ Secret set")
+
+# 3. Upload all committed files (data/ and .git/ are excluded)
+api.upload_folder(
+    folder_path=".",
+    repo_id="menezes123/itbi-sp-dashboard",
+    repo_type="space",
+    ignore_patterns=["data/*", ".git/*"],
+    commit_message="Deploy from GitHub Actions",
+)
+print("✅ Live → https://huggingface.co/spaces/menezes123/itbi-sp-dashboard")
+EOF
