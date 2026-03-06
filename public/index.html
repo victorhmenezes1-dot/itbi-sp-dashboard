@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITBI São Paulo — Dashboard</title>
+
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <!-- Tom Select (multiselect) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h5 class="mb-0">🔍 Filtros</h5>
+    </div>
+
+    <div class="sidebar-body">
+
+      <div class="filter-group">
+        <label>Ano</label>
+        <select id="sel-anos" multiple placeholder="Todos os anos…"></select>
+      </div>
+
+      <div class="filter-group">
+        <label>Mês</label>
+        <select id="sel-meses" multiple placeholder="Todos os meses…"></select>
+      </div>
+
+      <div class="filter-group">
+        <label>Bairro / Distrito</label>
+        <select id="sel-bairros" multiple placeholder="Todos os bairros…"></select>
+      </div>
+
+      <div class="filter-group">
+        <label>Natureza de Transação</label>
+        <select id="sel-naturezas" multiple placeholder="Todas…"></select>
+      </div>
+
+      <div class="filter-group">
+        <label>Valor Mínimo (R$)</label>
+        <input type="number" id="val-min" class="form-control form-control-sm" value="0" step="50000" min="0" />
+      </div>
+
+      <div class="filter-group">
+        <label>Valor Máximo (R$)</label>
+        <input type="number" id="val-max" class="form-control form-control-sm" step="50000" min="0" />
+      </div>
+
+      <div class="filter-group">
+        <label>Top <span id="top-n-val" class="fw-bold">50</span> transações</label>
+        <input type="range" id="top-n" class="form-range" min="10" max="500" value="50" step="10" />
+      </div>
+
+    </div><!-- /sidebar-body -->
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="page-header">
+      <h1>🏠 ITBI São Paulo — Análise de Dados</h1>
+      <p class="text-muted mb-0">
+        Fonte: Prefeitura de São Paulo – Secretaria Municipal da Fazenda · 2009–2025
+      </p>
+    </header>
+
+    <!-- KPIs -->
+    <section class="mb-4">
+      <h4 class="section-title">📌 Totais do Período Filtrado</h4>
+      <div id="kpis-container" class="row g-3">
+        <div class="col-12 text-center py-3">
+          <div class="spinner-border text-primary"></div>
+        </div>
+      </div>
+      <p id="periodo-caption" class="text-muted small mt-1"></p>
+    </section>
+
+    <hr />
+
+    <!-- Top Transactions -->
+    <section class="mb-4">
+      <h4 id="top-title" class="section-title">🏆 Maiores Transações</h4>
+      <p id="table-timing" class="text-muted small"></p>
+      <div id="table-container">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary"></div>
+          <div class="mt-2 text-muted">Carregando…</div>
+        </div>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- Price Evolution Chart -->
+    <section class="mb-4">
+      <h4 class="section-title">📈 Evolução de Preço por m² (R$/m²)</h4>
+      <p class="text-muted small">Mediana do preço por m² construído ao longo dos anos, por bairro.</p>
+
+      <div class="row g-3 mb-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Bairros</label>
+          <select id="sel-chart-bairros" multiple placeholder="Selecione bairros…"></select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Anos</label>
+          <select id="sel-chart-anos" multiple placeholder="Todos os anos…"></select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">
+            Mín. transações: <span id="min-n-val">30</span>
+          </label>
+          <input type="range" id="min-n" class="form-range" min="1" max="500" value="30" />
+        </div>
+      </div>
+
+      <div id="chart-container" style="min-height:520px;"></div>
+    </section>
+
+    <hr />
+
+    <!-- Address Search -->
+    <section class="mb-5">
+      <h4 class="section-title">🔎 Busca por Logradouro</h4>
+      <p class="text-muted small">Digite parte do nome da rua para ver todas as transações registradas.</p>
+
+      <div class="row g-2 mb-2">
+        <div class="col-md-4">
+          <input type="text" id="search-termo" class="form-control"
+            placeholder="Ex: PAULISTA, AUGUSTA, FARIA LIMA" />
+        </div>
+        <div class="col-md-2">
+          <input type="text" id="search-numero" class="form-control"
+            placeholder="Número" />
+        </div>
+        <div class="col-md-3">
+          <input type="text" id="search-ref" class="form-control"
+            placeholder="Referência (Ex: TORRE A)" />
+        </div>
+        <div class="col-md-2">
+          <select id="search-anos" multiple placeholder="Todos os anos…"></select>
+        </div>
+        <div class="col-md-1 d-grid">
+          <button id="btn-search" class="btn btn-primary">Buscar</button>
+        </div>
+      </div>
+
+      <div class="mb-3 d-flex align-items-center gap-2">
+        <label class="form-label mb-0">Máx. linhas:</label>
+        <input type="number" id="search-limit" class="form-control form-control-sm"
+          style="width:90px" value="200" min="10" max="2000" />
+      </div>
+
+      <div id="search-container"></div>
+    </section>
+
+  </main><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="text-center">
+    <div class="spinner-border text-light" style="width:3rem;height:3rem;"></div>
+    <div class="text-light mt-3 fs-5">Carregando dados…</div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
