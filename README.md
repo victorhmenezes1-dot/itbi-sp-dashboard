@@ -1,3 +1,14 @@
+---
+title: ITBI SP Dashboard
+emoji: 🏠
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: 1.41.0
+app_file: app.py
+pinned: false
+---
+
 # ITBI São Paulo — Análise de Dados
 
 Dashboard interativo para análise do ITBI (Imposto sobre Transmissão de Bens Imóveis) de São Paulo, cobrindo 2009–2025.
